@@ -1,0 +1,42 @@
+{
+    "name": "@mandatedev/agent",
+    "version": "0.1.0",
+    "description": "The Mandate Agent SDK — Trust Engine for the Agent Economy",
+    "main": "./dist/index.js",
+    "module": "./dist/index.mjs",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "import": "./dist/index.mjs",
+        "require": "./dist/index.js",
+        "types": "./dist/index.d.ts"
+      }
+    },
+    "scripts": {
+      "build": "tsup src/index.ts --format cjs,esm --dts",
+      "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
+      "test": "vitest",
+      "lint": "eslint src/"
+    },
+    "keywords": [
+      "ai-agents",
+      "agent-security",
+      "trust-infrastructure",
+      "llm",
+      "langchain",
+      "openai",
+      "anthropic",
+      "mandate"
+    ],
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/Bieliliber/mandate.git"
+    },
+    "devDependencies": {
+      "typescript": "^5.4.0",
+      "tsup": "^8.0.0",
+      "vitest": "^1.6.0",
+      "@types/node": "^20.0.0"
+    }
+  }
