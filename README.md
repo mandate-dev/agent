@@ -79,6 +79,7 @@ for (const toolCall of allowed) {
 
 ```typescript
 import { createMandateAgent } from '@mandatedev/agent';
+import { AgentExecutor } from 'langchain/agents';
 
 const mandateAgent = createMandateAgent({ /* config */ });
 
@@ -88,6 +89,7 @@ await agentExecutor.invoke(input, { callbacks: [handler] });
 
 // Pattern 2 — Wrap all tools at once
 const safeTools = mandateAgent.langchain.wrapTools(tools);
+const executor = await AgentExecutor.fromAgentAndTools({ tools: safeTools });
 
 // Pattern 3 — Wrap individual tools
 const safeTool = mandateAgent.langchain.wrapTool(myTool);
@@ -101,6 +103,8 @@ const safeTool = mandateAgent.langchain.wrapTool(myTool);
 import { createMandateAgent } from '@mandatedev/agent';
 
 const mandateAgent = createMandateAgent({ /* config */ });
+
+const response = await anthropic.messages.create({ /* ... */ });
 
 const { allowed, blocked } = await mandateAgent.anthropic.interceptToolCalls(
   response.content.filter(b => b.type === 'tool_use')
@@ -137,10 +141,10 @@ agent = create_mandate_agent(MandateConfig(
     )
 ))
 
-# Wrap your AutoGen tools
-safe_tools = agent.autogen.wrap_tools([search_web, read_file])
+# Wrap your AutoGen tools — policy enforced before every call
+safe_tools = agent.autogen.wrap_tools([search_web, read_file, send_email])
 
-# Or use as decorator
+# Or wrap with decorator
 @agent.autogen.wrap_tool
 async def search_web(query: str) -> str:
     ...
@@ -150,10 +154,15 @@ async def search_web(query: str) -> str:
 
 ## Policy Language
 
+Policies are declared in plain JavaScript or Python objects. Mandate compiles them into WASM at initialization.
+
 ```typescript
 policy: {
   allow: [
+    // Wildcard — allow all read tools
     { tool: 'read_*' },
+
+    // Conditional — allow payments under $10,000 in USD only
     {
       tool: 'process_payment',
       conditions: [
@@ -164,7 +173,9 @@ policy: {
     },
   ],
   deny: [
+    // Block all delete operations
     { tool: 'delete_*' },
+    // Block raw database access
     { tool: 'db_query' },
   ],
 }
@@ -188,16 +199,38 @@ policy: {
 
 ## Cryptographic Audit Chain
 
+Every decision is sealed to a SHA-256 hash chain. Each event references the hash of the previous event — making the entire history tamper-proof and verifiable.
+
 ```typescript
+// Verify the audit chain at any time
 const { valid } = agent.verifyAuditChain();
+// → { valid: true }
+
+// Flush and inspect raw events
 const events = await agent.flushAuditBuffer();
 ```
 
-Every decision sealed to SHA-256. EU AI Act Article 12 compliant.
+The chain is compatible with EU AI Act Article 12 traceability requirements.
+
+---
+
+## WASM Policy Evaluator
+
+The policy evaluation engine is written in Rust and compiled to WebAssembly. It runs in an isolated sandbox inside your agent's process — the agent code cannot touch or bypass it.
+
+```bash
+# The Rust source is in packages/sdk-rust
+# Compiled by CI using wasm-pack
+# Shipped inside the npm package
+```
+
+The JS evaluator is used as a fallback if WASM fails to load. Both produce identical results.
 
 ---
 
 ## Degradation Model
+
+If the Mandate control plane is unreachable, agents continue on their last valid policy for up to 30 minutes (configurable).
 
 | Tier | State | Agent Behavior |
 |------|-------|----------------|
@@ -217,7 +250,7 @@ Sign up free at [getmandate.dev](https://getmandate.dev) — 3 agents, no credit
 
 ## License
 
-MIT — the SDK is free and open source forever.
+MIT — the SDK is free and open source forever.  
 The control plane, fleet management, and kill switch infrastructure are commercial products.
 
 ---
@@ -227,3 +260,4 @@ The control plane, fleet management, and kill switch infrastructure are commerci
 - **Website:** [getmandate.dev](https://getmandate.dev)
 - **npm:** [@mandatedev/agent](https://www.npmjs.com/package/@mandatedev/agent)
 - **PyPI:** [mandatedev-agent](https://pypi.org/project/mandatedev-agent/)
+- **War Room:** [app.getmandate.dev](https://app.getmandate.dev)
